@@ -1,0 +1,53 @@
+<div class="page-header">
+  <h1>Mi galería</h1>
+
+  <h2>Buscar en mi galeria</h2>
+
+
+  <div class="form-group text-center">
+    <div class="col-sm-7">
+      <p>Busque por descripción de la imagen o busque imagenes que contengan personas</p>
+      <form class="form-inline">
+        <input class="form-control mr-sm-2" type="text" placeholder="introduzca un texto..." id="searchInput" #searchInput>
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit" (click)="search(searchInput.value)">Buscar</button>
+        <button class="btn btn-info my-2 my-sm-0" type="submit" (click)="searchPersons()">Buscar personas</button>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="searchPersonResults">
+    <h2><b>Resultados de la búsqueda de personas</b></h2>
+    <div class="results">
+      <div *ngFor="let result of searchPersonResults" class="card">
+        <img src="{{result.storageUrl}}" />
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="searchResults">
+    <h2><b>Resultados de la búsqueda</b></h2>
+    <div class="results">
+      <div *ngFor="let result of searchResults" class="card">
+        <img src="{{result.storageUrl}}" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Galería completa</h2>
+
+<div class="results" *ngIf="savedImages">
+  <div *ngFor="let savedImage of savedImages" class="card">
+    <img src="{{savedImage.storageUrl}}" />
+    <div>
+      <h4><b>{{savedImage.description}}</b></h4>
+      <div>
+        <span class="tag label" [ngClass]="{'label-default': tag.confidence >= .75, 'label-warning': tag.confidence >= .5 && tag.confidence < .75, 'label-danger': tag.confidence < .5}"
+              *ngFor="let tag of savedImage.tags">{{tag.name}}</span>
+      </div>
+    </div>
+    <div *ngIf="!savedImages">
+      <h4>No images to display</h4>
+    </div>
+  </div>
+</div>

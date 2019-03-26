@@ -1,0 +1,47 @@
+<div class="page-header">
+  <h1>Buscar</h1>
+  <p>Encuentre imágenes usando el sericio cognitivo de búsqueda de Bing.</p>
+  <div class="form-group">
+
+    <form class="form-inline">
+      <input class="form-control mr-sm-2" type="text" placeholder="introduzca un texto..." id="searchInput" #searchInput>
+      <button class="btn btn-outline-success my-2 my-sm-0" type="submit" (click)="search(searchInput.value)">Buscar</button>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="searchResults">
+  <h2><b>Imagen seleccionada</b></h2>
+  <div class="currentItem card" *ngIf="currentAnalytics || isAnalyzing">
+    <img src="{{currentItem?.thumbnailUrl}}" />
+    <div *ngIf="!isAnalyzing">
+      <h4><b>{{currentAnalytics?.description.captions[0]?.text}}</b></h4>
+      <div>
+        <span class="tag label" [ngClass]="{'label-default': tag.confidence >= .75, 'label-warning': tag.confidence >= .5 && tag.confidence < .75, 'label-danger': tag.confidence < .5}" *ngFor="let tag of currentAnalytics?.tags">{{tag.name}}</span>
+      </div>
+      <button *ngIf="isSaving && !currentItemSaved" class="btn btn-primary" type="button" disabled>
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        Guardando...
+      </button>
+      <button class="btn btn-primary" type="button" *ngIf="!currentItemSaved && !isSaving" (click)="saveImage()">Guardar imagen</button>
+      <div *ngIf="currentItemSaved" class="alert alert-success" role="alert">
+        La imagen se ha guardado correctamente
+      </div>
+    </div>
+    <div *ngIf="isAnalyzing">
+      <h4>Analizando....</h4>
+    </div>
+  </div>
+  <h4 class="no-results" *ngIf="!currentAnalytics && !isAnalyzing">Seleccione una foto para analizar.</h4>
+</div>
+<br />
+<br />
+
+<h2><b>Resultados</b></h2>
+<div class="results" *ngIf="searchResults">
+  <div *ngFor="let result of searchResults" (click)="analyze(result)" class="card">
+    <img src="{{result?.thumbnailUrl}}" />
+  </div>
+</div>
+<h4 class="no-results" *ngIf="!searchResults && !isSearching">Busque imagenes para mostrar resultados aqui.</h4>
+<h4 class="no-results" *ngIf="isSearching">cargando resultados...</h4>
