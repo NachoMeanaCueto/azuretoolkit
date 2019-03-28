@@ -11,9 +11,12 @@
     <!-- Set this to true if you enable server-side prerendering -->
     <BuildServerSideRenderer>false</BuildServerSideRenderer>
     <UserSecretsId>e4721412-c842-4349-8b0f-6925afcb2eef</UserSecretsId>
+    <ApplicationInsightsResourceId>/subscriptions/427eba66-8bf7-4e39-a66e-45ea64759b2a/resourcegroups/azuretoolkit-imeana/providers/microsoft.insights/components/Application-Insights-imeana</ApplicationInsightsResourceId>
+    <ApplicationInsightsAnnotationResourceId>/subscriptions/427eba66-8bf7-4e39-a66e-45ea64759b2a/resourcegroups/azuretoolkit-imeana/providers/microsoft.insights/components/Application-Insights-imeana</ApplicationInsightsAnnotationResourceId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Azure.Search" Version="5.0.3" />
@@ -60,6 +63,10 @@
     <TypeScriptCompile Include="ClientApp\src\app\common\services\user.service.ts" />
     <TypeScriptCompile Include="ClientApp\src\app\components\gallery\gallery.component.ts" />
     <TypeScriptCompile Include="ClientApp\src\app\components\search\search.component.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services" />
   </ItemGroup>
 
   <Target Name="DebugEnsureNodeEnv" BeforeTargets="Build" Condition=" '$(Configuration)' == 'Debug' And !Exists('$(SpaRoot)node_modules') ">
