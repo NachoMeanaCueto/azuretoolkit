@@ -11,6 +11,7 @@ using Microsoft.Azure.Search.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using NLog;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -37,11 +38,13 @@ namespace AzureToolkit.Controllers
         private CloudBlobContainer _container;
         private AzureToolkitContext _context;
         private IConfiguration _iconfig;
+        private Logger _logger;
 
         public ImagesController(IConfiguration iconfig, AzureToolkitContext context)
         {
             this._context = context;
             this._iconfig = iconfig; 
+            this._logger = LogManager.GetLogger("Logger");
 
             var storageAccount = new CloudStorageAccount(
                 new Microsoft.WindowsAzure.Storage.Auth.StorageCredentials(
@@ -63,14 +66,27 @@ namespace AzureToolkit.Controllers
         [HttpGet("{userId}")]
         public IActionResult GetImages(string userID)
         {
-            var images = _context.SavedImages.Where(image => image.UserId == userID);
-            return Ok(images);
+            IActionResult result = null;
+            _logger.Info($"Call GetImages with user: {userID}");
+            try
+            {
+                var images = _context.SavedImages.Where(image => image.UserId == userID);
+                result = Ok(images);
+                _logger.Debug($"Call GetImages success");
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, e.Message);
+                result = BadRequest(e.Message);
+            }
+            return result;
         }
 
         [HttpGet("search/{userId}/{term}")]
         public IActionResult SearchImages(string userId, string term)
         {
             IActionResult result = null;
+            _logger.Info($"Call SearchImages with user: {userId} and search term: {term}");
             try
             {
                 string searchServiceName = this._iconfig.GetValue<string>("searchService_Name");
@@ -80,13 +96,13 @@ namespace AzureToolkit.Controllers
 
                 var parameters = new SearchParameters() { Filter = string.Format("UserId eq '{0}'", userId) };
                 DocumentSearchResult<SavedImage> results = indexClient.Documents.Search<SavedImage>(term, parameters);
-
+                
                 result = Ok(results.Results.Select((savedImage) => savedImage.Document));
+                _logger.Debug("Call SearchImages success");
             }
             catch (Exception e)
             {
-                //TODO AddLogger 
-                Console.WriteLine(e.Message);
+                _logger.Error(e,e.Message);
 
                 result = BadRequest(e.Message);
 
@@ -96,39 +112,40 @@ namespace AzureToolkit.Controllers
 
 
         [HttpGet("searchPerson/{userId}")]
-        public async Task<IActionResult> searchPerson(string userId)
+        public async Task<IActionResult> SearchPerson(string userId)
         {
             IActionResult result = null;
             var imagelist = new List<SavedImage>();
+            HttpResponseMessage response;
+            HttpClient client;
+
+            _logger.Info($"Call SearchPerson with user: {userId}");
             try
             {
-                HttpClient client = new HttpClient();
-                HttpResponseMessage response;
-
-                client.DefaultRequestHeaders.Add(
-                    "Ocp-Apim-Subscription-Key", this._iconfig.GetValue<string>("faceService_ApiKey"));
-
-                foreach(var image in _context.SavedImages.Where(image => image.UserId == userId))
+                using(client = new HttpClient())
                 {
-                  
-                    response = await client.PostAsJsonAsync(this._iconfig.GetValue<string>("faceService_Path"), new SearchPersonDto { url = image.StorageUrl });
-                    string contentString = await response.Content.ReadAsStringAsync();
+                    client.DefaultRequestHeaders.Add(
+                        "Ocp-Apim-Subscription-Key", this._iconfig.GetValue<string>("faceService_ApiKey"));
 
-                    if (contentString.Contains("error"))
-                        throw new Exception(contentString);
-                        
-                    if (contentString != "[]")
+                    foreach (var image in _context.SavedImages.Where(image => image.UserId == userId))
+                    {
+                        response = await client.PostAsJsonAsync(this._iconfig.GetValue<string>("faceService_Path"), new SearchPersonDto { url = image.StorageUrl });
+                        string contentString = await response.Content.ReadAsStringAsync();
+
+                        if (contentString.Contains("error"))
+                            throw new Exception(contentString);
+
+                        if (contentString != "[]")
                             imagelist.Add(image);
+                    }
                 }
                 result = Ok(imagelist);
+                _logger.Debug($"Call SearchPerson success");
             }
             catch (Exception e)
             {
-                //TODO AddLogger 
-                Console.WriteLine(e.Message);
-
+                _logger.Error(e, e.Message);
                 result = BadRequest(e.Message);
-
             }
             return result;
         }
@@ -139,8 +156,12 @@ namespace AzureToolkit.Controllers
         {
             System.IO.Stream stream = null;
             IActionResult result = Ok();
+            
             try
             {
+                _logger.Info($"Call PostImage with data: user: {request.UserId}, image: (Id: {request.Id}, description: {request.Description}, tags: {request.Tags}, url: {request.URL})");
+
+
                 var blockBlob = _container.GetBlockBlobReference(string.Format("{0}.{1}", request.Id, request.EncodingFormat));
                 var aRequest = (HttpWebRequest)WebRequest.Create(request.URL);
                 var aResponse = (await aRequest.GetResponseAsync()) as HttpWebResponse;
@@ -161,17 +182,18 @@ namespace AzureToolkit.Controllers
                     savedImage.Tags.Add(new SavedImageTag{ Tag = tag });
                 }
 
+                _logger.Debug("PostImage, saving data in db");
                 _context.Add(savedImage);
-
+                
                 _context.SaveChanges();
+
+                _logger.Debug("PostImage, succes");
+
             }
             catch (Exception e)
             {
-                //TODO AddLogger 
-                Console.WriteLine(e.Message);
-                
+                _logger.Error(e, e.Message);
                 result = BadRequest();
-                
             }
             finally
             {
